@@ -1,25 +1,62 @@
 import streamlit as st
 import time
 from supabase_client import supabase
+from PIL import Image
 
 st.set_page_config(page_title="Quiz App", layout="centered")
 
+# ==========================================
+# LOADING SCREEN (LOGO UNIVERSITAS)
+# ==========================================
+if "loaded" not in st.session_state:
+    st.session_state.loaded = False
+
+if not st.session_state.loaded:
+    st.markdown(
+        """
+        <style>
+            .center {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 90vh;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<div class='center'>", unsafe_allow_html=True)
+
+    try:
+        logo = Image.open("assets/logo.png")
+        st.image(logo, width=250)
+    except:
+        st.write("Logo tidak ditemukan di folder assets/logo.png")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    time.sleep(2.5)
+    st.session_state.loaded = True
+    st.rerun()
+
+# =========================================================
 # Detect admin mode
+# =========================================================
 params = st.query_params
 is_admin = "page" in params and params["page"] == "admin"
 
 # =========================================================
-# LOAD QUESTIONS FROM SUPABASE
+# LOAD QUESTIONS
 # =========================================================
 def load_questions():
     res = supabase.table("questions").select("*").execute()
     data = res.data
-    # sort by ID
     data = sorted(data, key=lambda q: q["id"])
     return data
 
 # =========================================================
-# ⛔ ADMIN PAGE
+# ADMIN PAGE
 # =========================================================
 if is_admin:
     st.title("Admin Panel - Manage Questions")
@@ -51,7 +88,7 @@ if is_admin:
         st.write(f"**ID {q['id']}**: {q['question']}")
         st.write(q["options"])
         st.write(f"Jawaban benar: {q['answer']}")
-        
+
         col1, col2 = st.columns(2)
         with col1:
             if st.button(f"Edit {q['id']}"):
@@ -62,7 +99,7 @@ if is_admin:
                 supabase.table("questions").delete().eq("id", q["id"]).execute()
                 st.rerun()
 
-    # ==================== EDIT MODE ====================
+    # ========== EDIT MODE ==========
     if "edit" in st.query_params:
         edit_id = int(st.query_params["edit"])
         st.divider()
@@ -92,7 +129,7 @@ if is_admin:
 
 
 # =========================================================
-# NORMAL USER FLOW (HOME → QUIZ → RESULT → LEADERBOARD)
+# SESSION STATE
 # =========================================================
 
 if "page" not in st.session_state:
